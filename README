@@ -162,3 +162,11 @@ Commands
   "default".
 
   usage: ``t switch TIMESHEET``
+
+**database**
+  Switch to a new database. This first needs to be setup in your 
+  config file.  Check out the example.
+
+  usage: ``t db db_from_config``
+
+  aliases: *db*
