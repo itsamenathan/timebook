@@ -242,6 +242,75 @@ of the available timesheets.')
         table.append([cur_name, active, today, total_time])
     cmdutil.pprint_table(table)
 
+@command('show work done today', aliases=('td',))
+def today(db, args):
+    parser = OptionParser(usage='''usage: %prog list
+
+List the available timesheets.''')
+    parser.add_option('-s', '--simple', dest='simple',
+                      action='store_true', help='Only display the names \
+of the available timesheets.')
+    opts, args = parser.parse_args(args=args)
+
+    if opts.simple:
+        db.execute(
+        u'''
+        select
+            distinct sheet
+        from
+            entry
+        order by
+            sheet asc;
+        ''')
+        print u'\n'.join(r[0] for r in db.fetchall())
+        return
+
+    table = [[' Timesheet', 'Today']]
+    db.execute(u'''
+    select
+        e1.sheet as name,
+        e1.sheet = meta.value as is_current,
+        ifnull((select
+            strftime('%s', 'now') - e2.start_time
+         from
+            entry e2
+         where
+            e1.sheet = e2.sheet and e2.end_time is null), 0
+        ) as active,
+        (select
+            ifnull(sum(ifnull(e3.end_time, strftime('%s', 'now')) -
+                       e3.start_time), 0)
+            from
+                entry e3
+            where
+                e1.sheet = e3.sheet and
+                e3.start_time > strftime('%s', date('now'))
+        ) as today,
+        ifnull(sum(ifnull(e1.end_time, strftime('%s', 'now')) -
+                   e1.start_time), 0) as total
+    from
+        entry e1, meta
+    where
+        meta.key = 'current_sheet'
+    group by e1.sheet
+    order by e1.sheet asc;
+    ''')
+    sheets = db.fetchall()
+    if len(sheets) == 0:
+        print u'(no sheets)'
+        return
+    sum = 0
+    for (name, is_current, active, today, total) in sheets:
+        if today == 0:
+          continue;
+        sum+=today
+        today = str(timedelta(seconds=today))
+        table.append([name, today])
+    cmdutil.pprint_table(table)
+    print "__________________________"
+    print "Total        "+str(timedelta(seconds=sum))
+
+
 @command('switch to a new timesheet')
 def switch(db, args):
     parser = OptionParser(usage='''usage: %prog switch TIMESHEET
@@ -280,7 +349,7 @@ number of entries of the timesheet.')
                 u'switched to timesheet "%s" (%s entries)' % (
                     sheet, entry_count), entry_count)
 
-@command('stop the timer for the current timesheet', aliases=('db',))
+@command('Switch to another databae from config file', aliases=('db',))
 def database(db, args):
   if len(args) == 1:
     options = cmdline.get_options()
