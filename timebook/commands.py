@@ -306,9 +306,9 @@ of the available timesheets.')
         sum+=today
         today = str(timedelta(seconds=today))
         table.append([name, today])
+    table.append(['-----','-------'])
+    table.append(['Total',str(timedelta(seconds=sum))])
     cmdutil.pprint_table(table)
-    print "--------------------"
-    print "Total        "+str(timedelta(seconds=sum))
 
 
 @command('switch to a new timesheet')
